@@ -1,11 +1,13 @@
 ## Установка
 1) Клонируйте репозиторий:
+   
    git clone https://github.com/ben0x01/layerswap.git
    
    cd layerswap
 
 2) Настройка виртуального окружения:
-  python -m venv venv
+  
+   python -m venv venv
 
   source venv/bin/activate  #для мака/linux
 
