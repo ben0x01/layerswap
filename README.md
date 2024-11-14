@@ -43,3 +43,9 @@ MIN_AMOUNT_FOR_SWAP = False #свап минимальной суммы введ
 MAX_AMOUNT_FOR_SWAP = False #свап максимальной суммы введенной в AMOUNT_FOR_SWAP
 
 PERCENT_FOR_SWAP = True # если выбираем процент, то оставляем True
+
+
+## Добавление кошельков
+1) В папке data находиться 2 текстовых файла:
+wallets.txt (в него добавляем приватные ключи от EVM кошелька) 
+Fuel-Wallets.txt (в него добавляем адреса fuel кошельков)
