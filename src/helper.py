@@ -47,7 +47,7 @@ def retry_async(attempts=3, delay=2):
     return decorator
 
 
-@retry_async(attempts=3, delay=random.randint(SLEEP_TIME_RETRY[0], SLEEP_TIME_RETRY[1]))
+@retry_async(attempts=3, delay=random.randint(1, 5))
 async def get_call_data(amount, network_from, fuel_address, source_address):
     url = "https://api.layerswap.io/api/v2/swaps"
     headers = {
@@ -80,18 +80,26 @@ async def get_call_data(amount, network_from, fuel_address, source_address):
         "source_address": source_address
     }
 
-    async with httpx.AsyncClient() as client:
-        response = await client.post(url, headers=headers, json=payload)
-        if response.status_code == 200:
-            try:
-                return response.json()
-            except json.JSONDecodeError:
-                log.error(f"Ответ не является JSON: {response.text}")
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, headers=headers, json=payload)
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    if "data" in data and "deposit_actions" in data["data"]:
+                        return data
+                    else:
+                        log.error(f"Unexpected response structure: {data}")
+                        return None
+                except json.JSONDecodeError as e:
+                    log.error(f"JSON decode error: {e} | Response text: {response.text}")
+                    return None
+            else:
+                log.error(f"HTTP error {response.status_code}: {response.text}")
                 return None
-        else:
-            log.error(f"Ошибка запроса: {response.status_code}, содержимое: {response.text}")
-            return None
-
+    except httpx.RequestError as e:
+        log.error(f"Request error: {e}")
+        return None
 
 async def check_rpc_status(rpc_url: str) -> bool:
     headers = {"Content-Type": "application/json"}
