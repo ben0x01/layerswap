@@ -1,4 +1,7 @@
 import random
+
+from typing import List
+
 from src.decryption import is_base64, decrypt_private_key
 
 
@@ -6,15 +9,9 @@ def load_lines(filename: str) -> list:
     with open(filename) as f:
         return [row.strip() for row in f if row and not row.startswith('#')]
 
-
-def load_and_decrypt_wallets(filename, password='', shuffle=False):
-    lines = load_lines(filename)
-    wallets = []
-    for line in lines:
-        if password and is_base64(line):
-            wallets.append(decrypt_private_key(line, password))
-        else:
-            wallets.append(line.strip())
+def load_and_decrypt_wallets(file_path: str, password: str, shuffle: bool = False) -> List[str]:
+    with open(file_path, 'r') as file:
+        wallets = [line.strip() for line in file if line.strip()]
     if shuffle:
         random.shuffle(wallets)
     return wallets
