@@ -22,8 +22,20 @@ NETWORKS = {
 }
 
 SHORTCUTS = {
-    "arb": "ARBITRUM_MAINNET",
-    "op": "OPTIMISM_MAINNET",
-    "base": "BASE_MAINNET",
-    "scroll": "SCROLL_MAINNET",
+    "arb": {
+        "name": "ARBITRUM_MAINNET",
+        "explorer": "https://arbiscan.io/tx/"
+    },
+    "op": {
+        "name": "OPTIMISM_MAINNET",
+        "explorer": "https://optimistic.etherscan.io/tx/"
+    },
+    "base": {
+        "name": "BASE_MAINNET",
+        "explorer": "https://basescan.org/tx/"
+    },
+    "scroll": {
+        "name": "SCROLL_MAINNET",
+        "explorer": "https://scrollscan.com/tx/"
+    }
 }
