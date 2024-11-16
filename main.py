@@ -97,7 +97,7 @@ async def main() -> Any | None:
             layerswap_instance.amount = amount
             await layerswap_instance.swap_to_fuel()
         except Exception as e:
-            log.error(f"Ошибка при выполнении свапа: {e}")
+            log.error(f"Ошибка при выполнении свапа: {str(e)}")
 
         delay_between_swaps = random.randint(SLEEP_TIME_SWAP[0], SLEEP_TIME_SWAP[1])
         log.info(f"Ожидание {delay_between_swaps} секунд перед следующим свапом...")
