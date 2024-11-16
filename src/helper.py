@@ -4,18 +4,48 @@ import asyncio
 import os
 import httpx
 
+from dataclasses import dataclass, asdict
 from functools import wraps
 from typing import Any, List, Tuple
 from web3.exceptions import TransactionNotFound
 
 from src.network_config import NETWORKS
-from user_config import SLEEP_TIME_RETRY
 from src.logger import Logger
 
 log = Logger(name="HelperFunctions", log_file="helper_functions.log").get_logger()
 
 
-async def is_transaction_successful(w3, tx_hash: hex, wallet_address:str, amount) -> bool:
+@dataclass
+class Payload:
+    amount: float
+    source_network: str
+    destination_network: str = "FUEL_MAINNET"
+    source_token: str = "ETH"
+    destination_token: str = "ETH"
+    destination_address: str = ""
+    refuel: bool = False
+    use_deposit_address: bool = False
+    source_address: str = ""
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+async def make_post_request(url: str, headers: dict, payload: dict) -> dict | None:
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, headers=headers, json=payload)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                log.error(f"HTTP error {response.status_code}: {response.text}")
+                return None
+    except httpx.RequestError as e:
+        log.error(f"Request error: {e}")
+        return None
+
+
+async def is_transaction_successful(w3, tx_hash: hex, wallet_address: str, amount) -> bool:
     await asyncio.sleep(30)
     try:
         receipt = w3.eth.get_transaction_receipt(tx_hash)
@@ -48,7 +78,7 @@ def retry_async(attempts=3, delay=2):
 
 
 @retry_async(attempts=3, delay=random.randint(1, 5))
-async def get_call_data(amount, network_from, fuel_address, source_address):
+async def get_call_data(amount: float, network_from: str, fuel_address: str, source_address: str) -> dict | None:
     url = "https://api.layerswap.io/api/v2/swaps"
     headers = {
         'accept': 'application/json, text/plain, */*',
@@ -67,39 +97,19 @@ async def get_call_data(amount, network_from, fuel_address, source_address):
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0',
         'x-ls-apikey': 'NDBxG+aon6WlbgIA2LfwmcbLU52qUL9qTnztTuTRPNSohf/VnxXpRaJlA5uLSQVqP8YGIiy/0mz+mMeZhLY4/Q',
     }
+    payload = Payload(
+        amount=amount,
+        source_network=network_from,
+        destination_address=fuel_address,
+        source_address=source_address
+    ).to_dict()
 
-    payload = {
-        "amount": amount,
-        "source_network": network_from,
-        "destination_network": "FUEL_MAINNET",
-        "source_token": "ETH",
-        "destination_token": "ETH",
-        "destination_address": fuel_address,
-        "refuel": False,
-        "use_deposit_address": False,
-        "source_address": source_address
-    }
+    response_data = await make_post_request(url, headers, payload)
+    if response_data and "data" in response_data and "deposit_actions" in response_data["data"]:
+        return response_data
+    log.error(f"Unexpected response structure or failed request: {response_data}")
+    return None
 
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(url, headers=headers, json=payload)
-            if response.status_code == 200:
-                try:
-                    data = response.json()
-                    if "data" in data and "deposit_actions" in data["data"]:
-                        return data
-                    else:
-                        log.error(f"Unexpected response structure: {data}")
-                        return None
-                except json.JSONDecodeError as e:
-                    log.error(f"JSON decode error: {str(e)} | Response text: {response.text}")
-                    return None
-            else:
-                log.error(f"HTTP error {response.status_code}: {response.text}")
-                return None
-    except httpx.RequestError as e:
-        log.error(f"Request error: {str(e)}")
-        return None
 
 async def check_rpc_status(rpc_url: str) -> bool:
     headers = {"Content-Type": "application/json"}
@@ -110,19 +120,12 @@ async def check_rpc_status(rpc_url: str) -> bool:
         "id": 1
     }
 
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(rpc_url, headers=headers, json=payload)
-            response_data = response.json()
-            if "result" in response_data:
-                log.info(f"RPC {rpc_url} is working")
-                return True
-            else:
-                log.warning(f"RPC {rpc_url} might be down or not responding correctly: {response_data}")
-                return False
-        except Exception as e:
-            log.error(f"Failed to connect to RPC {rpc_url}: {str(e)}")
-            return False
+    response_data = await make_post_request(rpc_url, headers, payload)
+    if response_data and "result" in response_data:
+        log.info(f"RPC {rpc_url} is working")
+        return True
+    log.warning(f"RPC {rpc_url} might be down or not responding correctly: {response_data}")
+    return False
 
 
 async def get_working_rpc_for_network(network_name: str) -> Any | None:
@@ -160,5 +163,5 @@ def load_wallet_data(private_keys_file: str, addresses_file: str, use_random: bo
 
     if use_random:
         random.shuffle(wallets)
-
+    log.info(f"Wallets loaded successfully | Count: {len(wallets)}")
     return wallets
