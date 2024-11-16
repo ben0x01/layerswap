@@ -57,5 +57,5 @@ class Layerswap:
             else:
                 raise Exception(f"Transaction with hash {tx_hash.hex()} failed.")
         except Exception as e:
-            log.error(f"Error during transaction: {e}")
+            log.error(f"Error during transaction: {str(e)}")
             raise
