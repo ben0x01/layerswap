@@ -24,7 +24,7 @@ async def is_transaction_successful(w3, tx_hash: hex, wallet_address:str, amount
         log.warning(f"Wallet: {wallet_address} | Amount: {amount} | Transaction with hash {tx_hash} not found.")
         return False
     except Exception as e:
-        log.error(f"Wallet: {wallet_address} | Amount: {amount} | Error checking transaction: {e}")
+        log.error(f"Wallet: {wallet_address} | Amount: {amount} | Error checking transaction: {str(e)}")
         return False
 
 
@@ -36,7 +36,7 @@ def retry_async(attempts=3, delay=2):
                 try:
                     return await func(*args, **kwargs)
                 except Exception as e:
-                    log.error(f"Attempt {attempt} failed with error: {e}")
+                    log.error(f"Attempt {attempt} failed with error: {str(e)}")
                     if attempt < attempts:
                         log.info(f"Retrying in {delay} seconds...")
                         await asyncio.sleep(delay)
@@ -92,13 +92,13 @@ async def get_call_data(amount, network_from, fuel_address, source_address):
                         log.error(f"Unexpected response structure: {data}")
                         return None
                 except json.JSONDecodeError as e:
-                    log.error(f"JSON decode error: {e} | Response text: {response.text}")
+                    log.error(f"JSON decode error: {str(e)} | Response text: {response.text}")
                     return None
             else:
                 log.error(f"HTTP error {response.status_code}: {response.text}")
                 return None
     except httpx.RequestError as e:
-        log.error(f"Request error: {e}")
+        log.error(f"Request error: {str(e)}")
         return None
 
 async def check_rpc_status(rpc_url: str) -> bool:
@@ -121,7 +121,7 @@ async def check_rpc_status(rpc_url: str) -> bool:
                 log.warning(f"RPC {rpc_url} might be down or not responding correctly: {response_data}")
                 return False
         except Exception as e:
-            log.error(f"Failed to connect to RPC {rpc_url}: {e}")
+            log.error(f"Failed to connect to RPC {rpc_url}: {str(e)}")
             return False
 
 
