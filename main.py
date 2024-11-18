@@ -1,9 +1,10 @@
 import os
 import asyncio
 import random
+
 from typing import Any
 
-from src.filereader import load_and_decrypt_wallets
+from src.filereader import FileReader
 from src.network_config import SHORTCUTS
 from src.swap import Layerswap
 from src.helper import get_working_rpc_for_network
@@ -53,15 +54,31 @@ async def calculate_amount(w3, wallet_address: str) -> float:
     log.info(f"Рассчитанная сумма для свапа: {amount:.6f} ETH")
     return amount
 
+
 async def main() -> Any | None:
-    decrypt_choice = input("Do you want to decrypt wallets? (yes/no): ").strip().lower()
+    decrypt_choice = input("Файл с кошельками зашифрован? (yes/no): ").strip().lower()
     use_encryption = decrypt_choice == "yes"
-    password = input("Enter password for wallet decryption: ").strip() if use_encryption else ""
+    password = input("Введите пароль для дешифрования: ").strip() if use_encryption else ""
 
     private_key_file = os.path.abspath('./data/wallets.txt')
     addresses_file = os.path.abspath('./data/Fuel-Wallets.txt')
 
-    wallets = load_and_decrypt_wallets(private_key_file, password=password)
+    file_reader = FileReader(private_key_file)
+
+    try:
+        wallets = file_reader.load()
+        if use_encryption:
+            log.info("Проверка и дешифрование кошельков...")
+            if file_reader.is_encrypted():
+                file_reader.decrypt(password)
+                wallets = file_reader.wallets
+                log.info("Все кошельки успешно дешифрованы.")
+            else:
+                log.info("Кошельки не зашифрованы, дешифрование пропущено.")
+    except Exception as e:
+        log.error(f"Ошибка при загрузке кошельков: {e}")
+        return
+
     with open(addresses_file, 'r') as addr_file:
         addresses = [line.strip() for line in addr_file if line.strip()]
 
@@ -104,6 +121,7 @@ async def main() -> Any | None:
         await asyncio.sleep(delay_between_swaps)
 
     log.info("Все кошельки использованы.")
+
 
 if __name__ == "__main__":
     asyncio.run(main())
