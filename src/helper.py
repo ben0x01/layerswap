@@ -147,9 +147,9 @@ def load_wallet_data(private_keys_file: str, addresses_file: str, use_random: bo
     addresses_file = os.path.abspath(addresses_file)
 
     if not os.path.isfile(private_keys_file):
-        raise FileNotFoundError(f"Файл с приватными ключами не найден: {private_keys_file}")
+        raise FileNotFoundError(f"The file with the private keys was not found: {private_keys_file}")
     if not os.path.isfile(addresses_file):
-        raise FileNotFoundError(f"Файл с адресами не найден: {addresses_file}")
+        raise FileNotFoundError(f"The file with the addresses was not found: {addresses_file}")
 
     with open(private_keys_file, 'r') as pk_file:
         private_keys = [line.strip() for line in pk_file if line.strip()]
@@ -158,7 +158,7 @@ def load_wallet_data(private_keys_file: str, addresses_file: str, use_random: bo
         addresses = [line.strip() for line in addr_file if line.strip()]
 
     if len(private_keys) != len(addresses):
-        raise ValueError("Количество приватных ключей не совпадает с количеством адресов")
+        raise ValueError("The number of private keys does not match the number of addresses")
 
     wallets = list(zip(private_keys, addresses))
 
