@@ -5,8 +5,12 @@ from src.decryption import get_cipher
 
 
 def encrypt_private_key(private_key: str, password: str) -> str:
+    private_key = private_key.strip() 
     if private_key.startswith("0x"):
         private_key = private_key[2:]
+
+    if len(private_key) % 2 != 0:
+        raise ValueError(f"Invalid private key: {private_key}. Key length must be even.")
 
     private_key_bytes = binascii.unhexlify(private_key)
 
