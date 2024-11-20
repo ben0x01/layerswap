@@ -2,7 +2,6 @@ import os
 import asyncio
 import random
 import platform
-
 from typing import Any
 
 from src.filereader import FileReader
@@ -10,7 +9,7 @@ from src.network_config import SHORTCUTS
 from src.swap import Layerswap
 from src.helper import get_working_rpc_for_network
 from src.logger import Logger
-from src.encryption import encrypt_private_key
+from src.decryption import decrypt_private_key, is_base64
 from user_config import (
     SHUFFLE_WALLETS, SLEEP_TIME_SWAP, NETWORK_FROM,
     AMOUNT_FOR_SWAP, USE_PERCENT_FOR_SWAP,
@@ -22,7 +21,7 @@ log = Logger(name="Main", log_file="main.log").get_logger()
 
 def input_password() -> str:
     system = platform.system().lower()
-    if system in ["linux", "darwin"]: 
+    if system in ["linux", "darwin"]:
         try:
             os.system("stty -echo")
             password = input("Enter encryption/decryption password: ").strip()
@@ -30,15 +29,15 @@ def input_password() -> str:
         finally:
             os.system("stty echo")
         return password
-    elif system == "windows":  # Windows
+    elif system == "windows":
         import msvcrt
         print("Enter encryption/decryption password: ", end="", flush=True)
         password = ""
         while True:
             char = msvcrt.getch()
-            if char == b'\r': 
+            if char == b'\r':
                 break
-            elif char == b'\b':  
+            elif char == b'\b':
                 if len(password) > 0:
                     password = password[:-1]
                     print("\b \b", end="", flush=True)
@@ -89,9 +88,8 @@ async def calculate_amount(w3, wallet_address: str) -> float:
 
 
 async def main() -> Any | None:
-    decrypt_choice = input("Is the wallet file encrypted? (yes/no): ").strip().lower()
-    use_encryption = decrypt_choice == "yes"
-    password = input_password() if use_encryption else ""
+    password = input("Enter encryption/decryption password (or press Enter to skip encryption): ").strip()
+    use_encryption = bool(password)
 
     private_key_file = os.path.abspath('./data/wallets.txt')
     addresses_file = os.path.abspath('./data/Fuel-Wallets.txt')
@@ -114,12 +112,15 @@ async def main() -> Any | None:
         log.info(f"Loaded {len(wallets)} wallets.")
 
         if use_encryption:
-            log.info("Encrypting or decrypting wallets...")
-            if file_reader.is_encrypted():
-                log.info("Wallets are encrypted. Attempting to decrypt...")
-                file_reader.decrypt(password)
-                wallets = file_reader.wallets
-                log.info("All wallets have been successfully decrypted.")
+            log.info("Decrypting wallets...")
+            decrypted_wallets = []
+            for private_key in wallets:
+                if is_base64(private_key):
+                    decrypted_wallets.append(decrypt_private_key(private_key, password))
+                else:
+                    decrypted_wallets.append(private_key)
+            wallets = decrypted_wallets
+            log.info("All wallets have been successfully decrypted.")
     except Exception as e:
         log.error(f"Error loading wallets: {e}")
         return
@@ -153,11 +154,6 @@ async def main() -> Any | None:
         return
 
     for private_key, fuel_address in wallet_pairs:
-        if use_encryption:
-            encrypted_private_key = encrypt_private_key(private_key, password)
-            log.info(f"Using a private key (encrypted): {encrypted_private_key}")
-        else:
-            log.info(f"Using a private key: {private_key}")
         log.info(f"Using the address: {fuel_address}")
 
         layerswap_instance = Layerswap(rpc, private_key, fuel_address, 0, network_name, explorer_url)
