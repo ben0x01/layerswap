@@ -105,6 +105,8 @@ async def get_call_data(amount: float, network_from: str, fuel_address: str, sou
         source_address=source_address
     ).to_dict()
 
+    print("Payload:", payload)
+
     response_data = await make_post_request(url, headers, payload)
     if response_data and "data" in response_data and "deposit_actions" in response_data["data"]:
         return response_data
@@ -153,16 +155,24 @@ def load_wallet_data(private_keys_file: str, addresses_file: str, use_random: bo
 
     with open(private_keys_file, 'r') as pk_file:
         private_keys = [line.strip() for line in pk_file if line.strip()]
-
     with open(addresses_file, 'r') as addr_file:
         addresses = [line.strip() for line in addr_file if line.strip()]
 
+    if not private_keys:
+        raise ValueError("The private keys file is empty or invalid")
+    if not addresses:
+        raise ValueError("The addresses file is empty or invalid")
+
     if len(private_keys) != len(addresses):
         raise ValueError("The number of private keys does not match the number of addresses")
-
     wallets = list(zip(private_keys, addresses))
 
     if use_random:
+        log.info("Shuffling wallets...")
         random.shuffle(wallets)
+        log.debug(f"Shuffled wallets: {wallets}")
+    else:
+        log.info("Wallet shuffling is disabled.")
+
     log.info(f"Wallets loaded successfully | Count: {len(wallets)}")
     return wallets
