@@ -20,24 +20,25 @@ log = Logger(name="Main", log_file="main.log").get_logger()
 
 
 def input_password() -> str:
+    """Handles cross-platform password input with hidden characters."""
     system = platform.system().lower()
     if system in ["linux", "darwin"]:
         try:
             os.system("stty -echo")
-            password = input("Enter encryption/decryption password: ").strip()
+            password = input("Enter encryption/decryption password (or press Enter to skip): ").strip()
             print()
         finally:
             os.system("stty echo")
         return password
     elif system == "windows":
         import msvcrt
-        print("Enter encryption/decryption password: ", end="", flush=True)
+        print("Enter encryption/decryption password (or press Enter to skip): ", end="", flush=True)
         password = ""
         while True:
             char = msvcrt.getch()
-            if char == b'\r':
+            if char == b'\r':  
                 break
-            elif char == b'\b':
+            elif char == b'\b': 
                 if len(password) > 0:
                     password = password[:-1]
                     print("\b \b", end="", flush=True)
@@ -51,7 +52,7 @@ def input_password() -> str:
 
 
 async def calculate_amount(w3, wallet_address: str) -> float:
-    log.info(f"Getting a balance for a wallet: {wallet_address}")
+    log.info(f"Getting a balance for wallet: {wallet_address}")
     balance_wei = w3.eth.get_balance(wallet_address)
     balance = balance_wei / 10 ** 18
     log.info(f"Wallet Balance (ETH): {balance:.18f} ETH")
@@ -59,24 +60,20 @@ async def calculate_amount(w3, wallet_address: str) -> float:
     if USE_AMOUNT_RANGE_FOR_SWAP:
         min_amount, max_amount = AMOUNT_FOR_SWAP
         amount = random.uniform(min_amount, max_amount)
-        log.info(f"The amount range is selected: {min_amount} - {max_amount} ETH, calculated amount: {amount:.6f} ETH")
-
+        log.info(f"Selected amount range: {min_amount} - {max_amount} ETH, calculated amount: {amount:.6f} ETH")
     elif USE_PERCENT_FOR_SWAP:
         min_percent, max_percent = PERCENT_OF_SWAP
         chosen_percent = random.uniform(min_percent, max_percent) / 100
         amount = balance * chosen_percent
-        log.info(f"The percentage is selected: {chosen_percent * 100:.2f}% from the balance {balance:.6f} ETH, calculated amount: {amount:.6f} ETH")
-
+        log.info(f"Selected percentage: {chosen_percent * 100:.2f}% from balance {balance:.6f} ETH, calculated amount: {amount:.6f} ETH")
     elif MIN_AMOUNT_FOR_SWAP:
         amount = AMOUNT_FOR_SWAP[0]
-        log.info(f"The minimum amount for the swap is used: {amount:.6f} ETH")
-
+        log.info(f"Using minimum swap amount: {amount:.6f} ETH")
     elif MAX_AMOUNT_FOR_SWAP:
         amount = AMOUNT_FOR_SWAP[1]
-        log.info(f"The maximum amount for the swap is used: {amount:.6f} ETH")
-
+        log.info(f"Using maximum swap amount: {amount:.6f} ETH")
     else:
-        log.error("No swap amount configuration is set to True.")
+        log.error("No valid swap configuration set.")
         raise ValueError("Invalid swap configuration: No valid amount range or percentage defined")
 
     if amount > balance:
@@ -88,7 +85,7 @@ async def calculate_amount(w3, wallet_address: str) -> float:
 
 
 async def main() -> Any | None:
-    password = input("Enter encryption/decryption password (or press Enter to skip encryption): ").strip()
+    password = input_password()  
     use_encryption = bool(password)
 
     private_key_file = os.path.abspath('./data/wallets.txt')
